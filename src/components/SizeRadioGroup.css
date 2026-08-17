@@ -1,0 +1,41 @@
+.size-radio {
+  border: none;
+  width: 100%;
+}
+
+.size-radio__legend {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.size-radio__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.size-radio__item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  background: #eee;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.size-radio__item input {
+  accent-color: var(--ink);
+}
+
+.size-radio__item.is-active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.size-radio__item.is-active input {
+  filter: invert(1);
+}

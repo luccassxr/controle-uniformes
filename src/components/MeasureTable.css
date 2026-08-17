@@ -1,0 +1,33 @@
+.measure-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 2px solid var(--ink);
+}
+
+.measure-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.measure-table th,
+.measure-table td {
+  padding: 0.5rem 0.65rem;
+  text-align: center;
+  border-bottom: 1px solid #ccc;
+}
+
+.measure-table th {
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+}
+
+.measure-table tr:last-child td {
+  border-bottom: none;
+}
+
+.measure-table tbody tr:nth-child(even) {
+  background: #f5f5f5;
+}

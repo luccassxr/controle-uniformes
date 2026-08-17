@@ -1,0 +1,20 @@
+.logo {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.logo--sm {
+  font-size: clamp(2rem, 6vw, 2.75rem);
+}
+
+.logo--md {
+  font-size: clamp(2.5rem, 8vw, 3.5rem);
+}
+
+.logo--lg {
+  font-size: clamp(3rem, 10vw, 4.25rem);
+}
