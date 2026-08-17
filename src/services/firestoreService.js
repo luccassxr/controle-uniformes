@@ -7,13 +7,13 @@
 import {
   doc,
   getDoc,
-  setDoc,
   getDocs,
+  setDoc,
   collection,
   query,
   where,
   serverTimestamp,
-  deleteDoc,
+  runTransaction,
 } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
 import { ROLES, PIECE_KEYS } from '../constants/roles'
@@ -21,7 +21,6 @@ import { ROLES, PIECE_KEYS } from '../constants/roles'
 const usersCol = () => collection(db, 'users')
 const userDoc = (uid) => doc(db, 'users', uid)
 const uniformeDoc = (uid) => doc(db, 'uniformes', uid)
-/** Índice auxiliar para impedir matrícula duplicada (doc id = matrícula) */
 const matriculaIndexDoc = (matricula) => doc(db, 'matriculas', matricula.trim())
 
 const EMPTY_UNIFORME = {
@@ -33,73 +32,92 @@ const EMPTY_UNIFORME = {
   tenis: '',
 }
 
-/** Perfil do usuário (coleção users) */
+const ALLOWED_PIECES = new Set(Object.values(PIECE_KEYS))
+
 export async function getUser(uid) {
+  if (!uid) return null
   const snap = await getDoc(userDoc(uid))
   if (!snap.exists()) return null
   return { uid: snap.id, ...snap.data() }
 }
 
-/** Uniforme do aluno (coleção uniformes, doc id = userId) */
 export async function getUniforme(uid) {
+  if (!uid) return null
   const snap = await getDoc(uniformeDoc(uid))
   if (!snap.exists()) return { userId: uid, ...EMPTY_UNIFORME }
   return { id: snap.id, ...snap.data() }
 }
 
-async function isMatriculaTaken(matricula, currentUid) {
-  const normalized = matricula.trim()
-  if (!normalized) return false
-  const snap = await getDoc(matriculaIndexDoc(normalized))
-  if (!snap.exists()) return false
-  return snap.data().uid !== currentUid
-}
-
-/** Salva dados do aluno na coleção users */
+/**
+ * Salva os dados do aluno e o índice de matrícula em uma única transação.
+ * Assim não fica matrícula antiga/duplicada se houver falha no meio da gravação.
+ */
 export async function saveUserData(uid, email, data) {
-  const nome = data.nome.trim()
-  const matricula = data.matricula.trim()
-  const { turno, serie } = data
+  const nome = String(data.nome || '').trim()
+  const matricula = String(data.matricula || '').trim()
+  const turno = String(data.turno || '').trim()
+  const serie = String(data.serie || '').trim()
 
-  if (await isMatriculaTaken(matricula, uid)) {
-    throw new Error('Esta matrícula já está cadastrada para outro aluno.')
+  if (!uid || !email || !nome || !matricula || !turno || !serie) {
+    throw new Error('Preencha todos os dados obrigatórios antes de continuar.')
   }
 
-  const existing = await getUser(uid)
-  if (existing?.matricula && existing.matricula !== matricula) {
-    await deleteDoc(matriculaIndexDoc(existing.matricula))
-  }
+  await runTransaction(db, async (transaction) => {
+    const userRef = userDoc(uid)
+    const uniformeRef = uniformeDoc(uid)
+    const novaMatriculaRef = matriculaIndexDoc(matricula)
 
-  await setDoc(
-    userDoc(uid),
-    {
-      uid,
-      nome,
-      email,
-      role: ROLES.STUDENT,
-      matricula,
-      serie,
-      turno,
-    },
-    { merge: true }
-  )
+    const userSnap = await transaction.get(userRef)
+    const uniformeSnap = await transaction.get(uniformeRef)
+    const novaMatriculaSnap = await transaction.get(novaMatriculaRef)
 
-  await setDoc(matriculaIndexDoc(matricula), { uid })
+    const existing = userSnap.exists() ? userSnap.data() : null
+    const matriculaAntiga = String(existing?.matricula || '').trim()
 
-  const uniformeSnap = await getDoc(uniformeDoc(uid))
-  if (!uniformeSnap.exists()) {
-    await setDoc(uniformeDoc(uid), {
-      userId: uid,
-      ...EMPTY_UNIFORME,
-      atualizadoEm: serverTimestamp(),
-    })
-  }
+    if (novaMatriculaSnap.exists() && novaMatriculaSnap.data().uid !== uid) {
+      throw new Error('Esta matrícula já está cadastrada para outro aluno.')
+    }
+
+    transaction.set(
+      userRef,
+      {
+        uid,
+        nome,
+        email,
+        role: ROLES.STUDENT,
+        matricula,
+        serie,
+        turno,
+      },
+      { merge: true }
+    )
+
+    if (matriculaAntiga && matriculaAntiga !== matricula) {
+      transaction.delete(matriculaIndexDoc(matriculaAntiga))
+    }
+
+    transaction.set(novaMatriculaRef, { uid })
+
+    if (!uniformeSnap.exists()) {
+      transaction.set(uniformeRef, {
+        userId: uid,
+        ...EMPTY_UNIFORME,
+        atualizadoEm: serverTimestamp(),
+      })
+    }
+  })
 
   return getUser(uid)
 }
 
 /** Salva tamanho de uma peça na coleção uniformes */
 export async function savePieceSize(uid, pieceKey, size) {
+  if (!uid) throw new Error('Usuário inválido.')
+  if (!ALLOWED_PIECES.has(pieceKey)) throw new Error('Peça de uniforme inválida.')
+
+  const normalizedSize = String(size ?? '').trim()
+  if (!normalizedSize) throw new Error('Selecione um tamanho válido.')
+
   const user = await getUser(uid)
   if (!user?.matricula) {
     throw new Error('Cadastre primeiro seus dados em Cadastro de Uniformes.')
@@ -109,7 +127,7 @@ export async function savePieceSize(uid, pieceKey, size) {
     uniformeDoc(uid),
     {
       userId: uid,
-      [pieceKey]: size,
+      [pieceKey]: normalizedSize,
       atualizadoEm: serverTimestamp(),
     },
     { merge: true }
@@ -134,20 +152,19 @@ export async function getAllStudentsWithUniformes() {
         matricula: user.matricula || '',
         turno: user.turno || '',
         serie: user.serie || '',
-        camiseta: uniforme.camiseta || '',
-        jaqueta: uniforme.jaqueta || '',
-        calca: uniforme.calca || '',
-        bermuda: uniforme.bermuda || '',
-        shortSaia: uniforme.shortSaia || '',
-        tenis: uniforme.tenis || '',
+        camiseta: uniforme?.camiseta || '',
+        jaqueta: uniforme?.jaqueta || '',
+        calca: uniforme?.calca || '',
+        bermuda: uniforme?.bermuda || '',
+        shortSaia: uniforme?.shortSaia || '',
+        tenis: uniforme?.tenis || '',
       }
     })
   )
 
-  return list.sort((a, b) => a.nome.localeCompare(b.nome))
+  return list.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
 }
 
-/** Contagem de tamanhos por peça (dashboard) */
 export function countSizesByPiece(students, field) {
   const counts = {}
   students.forEach((s) => {
