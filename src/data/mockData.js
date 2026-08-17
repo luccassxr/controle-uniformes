@@ -93,4 +93,11 @@ export const TENIS_TABELA = [
 ]
 
 export const TURNOS = ['Matutino', 'Vespertino', 'Noturno', 'Integral']
-export const SERIES = ['6º ano', '7º ano', '8º ano', '9º ano', '1º EM', '2º EM', '3º EM']
+export const SERIES = [
+  '1º ano do Ensino Médio',
+  '2º ano do Ensino Médio',
+  '3º ano do Ensino Médio',
+  '1º ano do Ensino Médio Técnico',
+  '2º ano do Ensino Médio Técnico',
+  '3º ano do Ensino Médio Técnico',
+]
