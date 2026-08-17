@@ -1,100 +1,120 @@
 # UNICONTROL
 
-Gestão e entrega de uniformes escolares — **Firebase Authentication + Firestore**.
+Sistema de gestão de uniformes escolares usando **React + Vite + Firebase Authentication + Firestore**.
 
-Projeto: **tcc-lucas-88ee4**
+Projeto Firebase atual: **unicontrol-1d0d6**
 
-## Onde está a configuração do Firebase?
+## Rodar no Chromebook
 
-Toda a configuração está centralizada em:
+Pré-requisitos:
 
-```
-src/firebase/firebase.js
-```
+- Chromebook com ambiente Linux ativado
+- Node.js e npm instalados
+- Internet para acessar o Firebase
 
-Cole ou edite o objeto `firebaseConfig` nesse arquivo (já preenchido com o projeto `tcc-lucas-88ee4`).
-
-Exports disponíveis:
-
-- `auth` — Authentication
-- `db` — Firestore
-- `firebaseConfig` — objeto de configuração
-
-## Como rodar
+Na pasta do projeto:
 
 ```bash
-cd unicontrol
 npm install
 npm run dev
 ```
 
-Abra `http://localhost:5173`.
+O Vite está configurado para aceitar conexões da rede local. O terminal mostrará algo parecido com:
 
-## Configuração no Firebase Console
+```text
+Local:   http://localhost:5173/
+Network: http://192.168.x.x:5173/
+```
 
-### 1. Authentication
+- No Chromebook, abra o endereço `Local`.
+- Em outros dispositivos na mesma rede, use o endereço `Network`.
 
-- Ative o método **E-mail/Senha**
-- Crie o usuário administrador:
-  - **E-mail:** `admin@unicontrol.com`
-  - **Senha:** `admin123`
-- No primeiro login, o app grava `role: "admin"` em `users/{uid}`
+Se estiver levando o projeto em um pen drive, copie a pasta para **Arquivos Linux** antes de executar os comandos. Isso evita problemas de permissão/acesso do Linux do ChromeOS ao armazenamento removível.
 
-### 2. Firestore
+## Firebase
 
-Crie o banco e publique as regras do arquivo `firestore.rules`.
+A configuração está em:
 
-### 3. Coleções
+```text
+src/firebase/firebase.js
+```
 
-| Coleção | Documento | Campos |
-|---------|-----------|--------|
-| `users` | `{uid}` | uid, nome, email, role, matricula, serie, turno |
-| `uniformes` | `{uid}` (= userId) | userId, camiseta, jaqueta, calca, bermuda, shortSaia, tenis, atualizadoEm |
-| `matriculas` | `{matricula}` | uid (índice anti-duplicidade) |
+O projeto usa:
 
-## Fluxos
-
-### Aluno
-
-1. **Cadastro** → Auth + `users` (role: student)
-2. **Login** → menu (`/menu`) — sessão mantida ao recarregar
-3. **Cadastro de dados** → `users` (nome, matrícula, turno, série)
-4. **Tamanhos das peças** → `uniformes`
+- Firebase Authentication (E-mail/Senha)
+- Cloud Firestore
 
 ### Administrador
 
-1. **Login** `admin@unicontrol.com` / `admin123`
-2. **Dashboard** `/admin/dashboard`
-3. Tabela, busca, filtros, contagem por tamanho, exportar CSV
+O e-mail reservado para administrador é:
 
-## Segurança (firestore.rules)
-
-- Aluno: lê/edita apenas `users/{seuUid}` e `uniformes/{seuUid}`
-- Admin: lê lista de todos `users` e `uniformes`
-- Rotas React bloqueiam acesso sem login (`ProtectedRoute`)
-
-## Estrutura do código
-
+```text
+admin@unicontrol.com
 ```
-src/firebase/firebase.js     ← CONFIG + auth + db
-src/services/authService.js  ← login, cadastro, logout, recuperar senha
-src/services/firestoreService.js ← users + uniformes
-src/context/AuthContext.jsx  ← sessão persistente
-src/pages/admin/AdminDashboard.jsx
+
+Crie esse usuário manualmente no Firebase Authentication e escolha uma senha forte. Não existe senha padrão salva no código.
+
+### Firestore
+
+Publique no Firebase Console o conteúdo do arquivo:
+
+```text
 firestore.rules
 ```
 
-## Build
+As regras impedem que alunos promovam a própria conta para administrador e restringem o acesso aos dados de cada usuário.
+
+## Coleções
+
+| Coleção | Documento | Campos principais |
+|---|---|---|
+| `users` | `{uid}` | uid, nome, email, role, matricula, serie, turno |
+| `uniformes` | `{uid}` | userId, camiseta, jaqueta, calca, bermuda, shortSaia, tenis, atualizadoEm |
+| `matriculas` | `{matricula}` | uid |
+
+## Fluxo do aluno
+
+1. Cria a conta.
+2. Faz login.
+3. Preenche nome, matrícula, turno e série.
+4. Escolhe os tamanhos das peças.
+5. Os dados são gravados no Firestore.
+
+## Fluxo do administrador
+
+1. Login com `admin@unicontrol.com`.
+2. Acesso automático ao dashboard.
+3. Visualização de alunos e tamanhos.
+4. Filtros por turno e série.
+5. Exportação CSV.
+
+## Comandos úteis
 
 ```bash
+npm run dev
 npm run build
 npm run preview
 ```
 
+## Antes da apresentação
+
+Faça estes testes no Chromebook:
+
+1. `npm install`
+2. `npm run dev`
+3. Abrir `http://localhost:5173`
+4. Fazer login como aluno
+5. Salvar um tamanho de uniforme
+6. Fazer login como administrador
+7. Confirmar que o aluno aparece no dashboard
+8. Confirmar que o Chromebook tem acesso à internet
+
 ## Solução de problemas
 
-| Erro | Ação |
-|------|------|
-| `permission-denied` | Publique `firestore.rules` no console |
-| Admin não entra no dashboard | Crie `admin@unicontrol.com` no Authentication |
-| Matrícula duplicada | Mensagem automática — use outra matrícula |
+| Problema | Ação |
+|---|---|
+| `permission-denied` | Publique a versão atual de `firestore.rules` no Firebase Console |
+| Admin não abre o dashboard | Confirme que `admin@unicontrol.com` existe no Authentication |
+| Site abre só no Chromebook | Use o endereço `Network` mostrado pelo Vite nos outros aparelhos |
+| `npm: command not found` | Instale Node.js/npm no ambiente Linux do Chromebook |
+| Firebase não conecta | Verifique a internet e se o projeto `unicontrol-1d0d6` está ativo |
