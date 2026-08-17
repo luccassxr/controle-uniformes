@@ -1,16 +1,17 @@
 /**
  * Firebase Authentication — cadastro, login, logout, recuperar senha.
- * Sessão mantida automaticamente via onAuthStateChanged no AuthContext.
  */
+import { initializeApp, deleteApp } from 'firebase/app'
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
   updateProfile,
+  getAuth,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db } from '../firebase/firebase'
+import { doc, getDoc, setDoc, serverTimestamp, getFirestore } from 'firebase/firestore'
+import { auth, db, firebaseConfig } from '../firebase/firebase'
 import { ADMIN_EMAIL, ROLES } from '../constants/roles'
 
 function mapAuthError(code) {
@@ -22,11 +23,11 @@ function mapAuthError(code) {
     'auth/wrong-password': 'Senha incorreta.',
     'auth/invalid-credential': 'E-mail ou senha incorretos.',
     'auth/too-many-requests': 'Muitas tentativas. Tente mais tarde.',
+    'auth/network-request-failed': 'Falha de conexão. Verifique a internet e tente novamente.',
   }
   return messages[code] || 'Erro de autenticação. Tente novamente.'
 }
 
-/** Garante documento em users com role correto (admin ou student) */
 export async function ensureUserProfile(user, nome = '') {
   const ref = doc(db, 'users', user.uid)
   const snap = await getDoc(ref)
@@ -37,7 +38,7 @@ export async function ensureUserProfile(user, nome = '') {
     await setDoc(ref, {
       uid: user.uid,
       email: user.email,
-      nome: nome || (isAdmin ? 'Administrador' : ''),
+      nome: nome || user.displayName || (isAdmin ? 'Administrador' : ''),
       role,
       matricula: '',
       serie: '',
@@ -52,38 +53,61 @@ export async function ensureUserProfile(user, nome = '') {
 }
 
 export async function getUserProfile(uid) {
+  if (!uid) return null
   const snap = await getDoc(doc(db, 'users', uid))
   return snap.exists() ? { uid, ...snap.data() } : null
 }
 
-/** Cadastro de aluno — Auth + documento users */
+/**
+ * Cria a conta em uma instância Firebase isolada.
+ * Assim o novo aluno não entra automaticamente na sessão principal durante o cadastro.
+ */
 export async function registerStudent(nome, email, password) {
-  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+  const normalizedName = String(nome || '').trim()
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+
+  if (!normalizedName) throw new Error('Informe o nome.')
+  if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
     throw new Error('Este e-mail é reservado para o administrador.')
   }
+
+  const registrationApp = initializeApp(
+    firebaseConfig,
+    `registration-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  )
+  const registrationAuth = getAuth(registrationApp)
+  const registrationDb = getFirestore(registrationApp)
+
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, password)
-    await updateProfile(cred.user, { displayName: nome })
-    await setDoc(doc(db, 'users', cred.user.uid), {
+    const cred = await createUserWithEmailAndPassword(
+      registrationAuth,
+      normalizedEmail,
+      password
+    )
+    await updateProfile(cred.user, { displayName: normalizedName })
+    await setDoc(doc(registrationDb, 'users', cred.user.uid), {
       uid: cred.user.uid,
-      email,
-      nome: nome.trim(),
+      email: normalizedEmail,
+      nome: normalizedName,
       role: ROLES.STUDENT,
       matricula: '',
       serie: '',
       turno: '',
       criadoEm: serverTimestamp(),
     })
-    await signOut(auth)
+    await signOut(registrationAuth)
     return cred.user
   } catch (err) {
     throw new Error(mapAuthError(err.code))
+  } finally {
+    await deleteApp(registrationApp)
   }
 }
 
 export async function loginUser(email, password) {
   try {
-    const cred = await signInWithEmailAndPassword(auth, email, password)
+    const normalizedEmail = String(email || '').trim().toLowerCase()
+    const cred = await signInWithEmailAndPassword(auth, normalizedEmail, password)
     const role = await ensureUserProfile(cred.user)
     return { user: cred.user, role }
   } catch (err) {
@@ -97,7 +121,8 @@ export async function logoutUser() {
 
 export async function resetPassword(email) {
   try {
-    await sendPasswordResetEmail(auth, email)
+    const normalizedEmail = String(email || '').trim().toLowerCase()
+    await sendPasswordResetEmail(auth, normalizedEmail)
   } catch (err) {
     throw new Error(mapAuthError(err.code))
   }
