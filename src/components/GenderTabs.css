@@ -1,22 +1,35 @@
 .gender-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.55rem;
   justify-content: center;
+  padding: 0.3rem;
+  border-radius: 16px;
+  background: #f3f7fc;
+  border: 1px solid var(--line);
 }
 
 .gender-tabs__btn {
-  padding: 0.5rem 1rem;
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-control);
+  padding: 0.62rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
   background: transparent;
+  color: var(--ink-muted);
   font-family: var(--font-body);
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.92rem;
+  font-weight: 750;
   cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.gender-tabs__btn:hover {
+  color: var(--primary);
+  background: #fff;
 }
 
 .gender-tabs__btn.is-active {
-  background: var(--ink);
-  color: #fff;
+  background: #fff;
+  color: var(--primary);
+  border-color: #cfe0f8;
+  box-shadow: 0 6px 16px rgba(22, 102, 216, 0.12);
 }
