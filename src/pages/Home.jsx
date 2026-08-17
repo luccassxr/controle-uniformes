@@ -1,23 +1,27 @@
-/**
- * Tela inicial — boas-vindas, Login e Cadastrar.
- */
 import { Link } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 
 export default function Home() {
   return (
     <PageLayout logoSize="lg">
-      <p className="card__subtitle" style={{ fontSize: '1.35rem', fontWeight: 600 }}>
-        Bem-vindo ao site
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+      <div className="welcome-block">
+        <span className="eyebrow">Gestão de uniformes escolares</span>
+        <h1 className="card__title">Bem-vindo ao UniControl</h1>
+        <p className="card__subtitle">
+          Cadastre seus dados e tamanhos de uniforme de forma rápida e organizada.
+        </p>
+      </div>
+
+      <div className="action-stack">
         <Link to="/login" className="btn">
-          Login
+          Entrar
         </Link>
-        <Link to="/cadastro" className="btn">
-          Cadastrar
+        <Link to="/cadastro" className="btn btn--outline">
+          Criar cadastro
         </Link>
       </div>
+
+      <p className="helper-text">Acesso de alunos e administração em um só lugar.</p>
     </PageLayout>
   )
 }
