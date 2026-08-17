@@ -1,5 +1,5 @@
 rules_version = '2';
-// Firebase Console → Firestore → Regras → Publicar
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,34 +9,59 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        request.auth.token.email != null &&
+        request.auth.token.email.lower() == 'admin@unicontrol.com';
     }
 
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function validStudentRole() {
+      return request.resource.data.role == 'student';
+    }
+
+    function roleUnchanged() {
+      return request.resource.data.role == resource.data.role;
+    }
+
     // users: uid, nome, email, role, matricula, serie, turno
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+
+      // Aluno só pode criar o próprio perfil como student.
+      // O e-mail administrativo reservado pode criar o próprio perfil como admin.
+      allow create: if isOwner(userId) &&
+        (
+          (isAdmin() && request.resource.data.role == 'admin') ||
+          (!isAdmin() && validStudentRole())
+        );
+
+      // Usuário comum pode editar seus dados, mas nunca trocar o próprio role.
+      // Admin pode atualizar documentos quando necessário.
+      allow update: if isAdmin() || (isOwner(userId) && roleUnchanged());
       allow list: if isAdmin();
+      allow delete: if false;
     }
 
     // uniformes: userId, camiseta, jaqueta, calca, bermuda, shortSaia, tenis, atualizadoEm
     match /uniformes/{uniformeId} {
       allow read: if isOwner(uniformeId) || isAdmin();
-      allow create, update: if isOwner(uniformeId);
+      allow create, update: if isOwner(uniformeId) &&
+        request.resource.data.userId == request.auth.uid;
       allow list: if isAdmin();
+      allow delete: if false;
     }
 
-    // Índice de matrícula (evita duplicidade entre alunos)
+    // Índice de matrícula (doc id = matrícula)
     match /matriculas/{matriculaId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow list: if false;
     }
   }
 }
