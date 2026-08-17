@@ -92,7 +92,7 @@ export const TENIS_TABELA = [
   { num: 45, cm: '29,8 – 30,5' },
 ]
 
-export const TURNOS = ['Matutino', 'Vespertino', 'Noturno', 'Integral']
+export const TURNOS = ['Matutino']
 export const SERIES = [
   '1º ano do Ensino Médio',
   '2º ano do Ensino Médio',
