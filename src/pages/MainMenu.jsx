@@ -1,6 +1,3 @@
-/**
- * Menu principal do aluno — uniforme e logout real.
- */
 import { Link, useNavigate } from 'react-router-dom'
 import PageLayout from '../components/PageLayout'
 import { logoutUser } from '../services/authService'
@@ -15,14 +12,27 @@ export default function MainMenu() {
 
   return (
     <PageLayout logoSize="lg">
-      <p className="card__subtitle" style={{ fontSize: '1.2rem', fontWeight: 600 }}>
-        O que você deseja?
-      </p>
-      <Link to="/uniformes" className="btn" style={{ textAlign: 'center', lineHeight: 1.2 }}>
-        Clique para cadastrar seu tamanho de uniforme
+      <div className="welcome-block">
+        <span className="eyebrow">Área do aluno</span>
+        <h2 className="card__title">O que você deseja fazer?</h2>
+        <p className="card__subtitle">
+          Atualize seus dados e registre os tamanhos das peças do seu uniforme.
+        </p>
+      </div>
+
+      <div className="feature-card">
+        <div className="feature-card__icon">U</div>
+        <div className="feature-card__content">
+          <strong>Cadastro de uniforme</strong>
+          <span>Informe matrícula, série e os tamanhos das peças.</span>
+        </div>
+      </div>
+
+      <Link to="/uniformes" className="btn">
+        Cadastrar meu uniforme
       </Link>
       <button type="button" className="btn btn--outline" onClick={handleLogout}>
-        Sair
+        Sair da conta
       </button>
     </PageLayout>
   )
