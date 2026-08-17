@@ -9,8 +9,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() &&
-        request.auth.token.email != null &&
-        request.auth.token.email.lower() == 'admin@unicontrol.com';
+        request.auth.token.email == 'admin@unicontrol.com';
     }
 
     function isOwner(uid) {
@@ -25,26 +24,18 @@ service cloud.firestore {
       return request.resource.data.role == resource.data.role;
     }
 
-    // users: uid, nome, email, role, matricula, serie, turno
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-
-      // Aluno só pode criar o próprio perfil como student.
-      // O e-mail administrativo reservado pode criar o próprio perfil como admin.
       allow create: if isOwner(userId) &&
         (
           (isAdmin() && request.resource.data.role == 'admin') ||
           (!isAdmin() && validStudentRole())
         );
-
-      // Usuário comum pode editar seus dados, mas nunca trocar o próprio role.
-      // Admin pode atualizar documentos quando necessário.
       allow update: if isAdmin() || (isOwner(userId) && roleUnchanged());
       allow list: if isAdmin();
       allow delete: if false;
     }
 
-    // uniformes: userId, camiseta, jaqueta, calca, bermuda, shortSaia, tenis, atualizadoEm
     match /uniformes/{uniformeId} {
       allow read: if isOwner(uniformeId) || isAdmin();
       allow create, update: if isOwner(uniformeId) &&
@@ -53,7 +44,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Índice de matrícula (doc id = matrícula)
     match /matriculas/{matriculaId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
