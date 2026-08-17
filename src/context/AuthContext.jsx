@@ -2,7 +2,7 @@
  * Contexto global de autenticação — usuário logado e papel (admin/aluno).
  */
 import { createContext, useContext, useEffect, useState } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '../firebase/firebase'
 import { getUserProfile, ensureUserProfile } from '../services/authService'
 import { ROLES } from '../constants/roles'
@@ -24,17 +24,29 @@ export function AuthProvider({ children }) {
         setLoading(false)
         return
       }
-      setUser(firebaseUser)
+
+      setLoading(true)
       try {
         const r = await ensureUserProfile(firebaseUser)
         const p = await getUserProfile(firebaseUser.uid)
+        setUser(firebaseUser)
         setProfile(p)
         setRole(r || p?.role || ROLES.STUDENT)
-      } catch {
-        setRole(ROLES.STUDENT)
+      } catch (err) {
+        console.error('Falha ao carregar perfil do usuário:', err)
+        setUser(null)
+        setProfile(null)
+        setRole(null)
+        try {
+          await signOut(auth)
+        } catch {
+          // Mantém o estado local desconectado mesmo se o signOut falhar.
+        }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
+
     return () => unsub()
   }, [])
 
