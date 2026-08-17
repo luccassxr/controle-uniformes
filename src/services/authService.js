@@ -9,6 +9,7 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   getAuth,
+  deleteUser,
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp, getFirestore } from 'firebase/firestore'
 import { auth, db, firebaseConfig } from '../firebase/firebase'
@@ -77,6 +78,7 @@ export async function registerStudent(nome, email, password) {
   )
   const registrationAuth = getAuth(registrationApp)
   const registrationDb = getFirestore(registrationApp)
+  let createdUser = null
 
   try {
     const cred = await createUserWithEmailAndPassword(
@@ -84,9 +86,11 @@ export async function registerStudent(nome, email, password) {
       normalizedEmail,
       password
     )
-    await updateProfile(cred.user, { displayName: normalizedName })
-    await setDoc(doc(registrationDb, 'users', cred.user.uid), {
-      uid: cred.user.uid,
+    createdUser = cred.user
+
+    await updateProfile(createdUser, { displayName: normalizedName })
+    await setDoc(doc(registrationDb, 'users', createdUser.uid), {
+      uid: createdUser.uid,
       email: normalizedEmail,
       nome: normalizedName,
       role: ROLES.STUDENT,
@@ -95,9 +99,17 @@ export async function registerStudent(nome, email, password) {
       turno: '',
       criadoEm: serverTimestamp(),
     })
+
     await signOut(registrationAuth)
-    return cred.user
+    return createdUser
   } catch (err) {
+    if (createdUser) {
+      try {
+        await deleteUser(createdUser)
+      } catch {
+        // Se a limpeza falhar, preserva o erro original do cadastro.
+      }
+    }
     throw new Error(mapAuthError(err.code))
   } finally {
     await deleteApp(registrationApp)
