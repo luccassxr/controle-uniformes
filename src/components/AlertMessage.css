@@ -1,25 +1,26 @@
 .alert {
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-control);
-  font-weight: 600;
-  font-size: 1rem;
-  text-align: center;
+  padding: 0.8rem 0.95rem;
+  border-radius: 12px;
+  font-weight: 650;
+  font-size: 0.9rem;
+  text-align: left;
+  border: 1px solid transparent;
 }
 
 .alert--success {
-  background: #e8f5e9;
-  color: #1b5e20;
-  border: 2px solid #2e7d32;
+  background: #edf9f1;
+  color: #176d35;
+  border-color: #bfe8cc;
 }
 
 .alert--error {
-  background: #ffebee;
-  color: #b71c1c;
-  border: 2px solid #c62828;
+  background: #fff1f1;
+  color: #a62525;
+  border-color: #f2c7c7;
 }
 
 .alert--info {
-  background: #e3f2fd;
-  color: #0d47a1;
-  border: 2px solid #1565c0;
+  background: #eef5ff;
+  color: #1554a8;
+  border-color: #c8daf5;
 }
